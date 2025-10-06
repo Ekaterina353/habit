@@ -13,23 +13,15 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
-from environs import Env
+from dotenv import load_dotenv
 
-# Инициализация Env и загрузка .env файла
-env = Env()
-
-# Определяем, откуда читать .env
-env_file = os.getenv('ENV_FILE_PATH', '.env')  # по умолчанию — .env
-env.read_env(env_file)  # читаем указанный файл
-
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Основные настройки
-SECRET_KEY = env.str("SECRET_KEY")
-
-DEBUG = env.bool("DEBUG", default=False)
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
+SECRET_KEY = os.getenv("SECRET_KEY")
+DEBUG = os.getenv("DEBUG", "False") == "True"
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
 # Application definition
 INSTALLED_APPS = [
@@ -41,6 +33,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "djoser",
     "habits",
     "notifications",
     "drf_yasg",
@@ -78,13 +71,13 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # Database
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env.str('DB_NAME', 'habitflow_db'),
-        'USER': env.str('DB_USER', 'postgres'),
-        'PASSWORD': env.str('DB_PASSWORD', 'password'),
-        'HOST': env.str('DB_HOST', 'localhost'),
-        'PORT': env.int('DB_PORT', 5432),
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT"),
     }
 }
 
@@ -106,10 +99,6 @@ USE_TZ = True
 
 # Static files
 STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "static"
-MEDIA_ROOT = BASE_DIR / "media"
-MEDIA_URL = "/media/"
-
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -119,25 +108,19 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": env.int("PAGE_SIZE", default=5),
+    "PAGE_SIZE": 5,
 }
 
 # Celery + Redis
-CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", default="redis://localhost:6379/0")
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 
-REDIS_URL = env.str("REDIS_URL", default="redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", default="redis://localhost:6379/0")
-DB_HOST = env.str("DB_HOST", default="localhost")
-DB_PORT = env.int("DB_PORT", default=5432)
-
 # CORS
-CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=True)
+CORS_ALLOW_ALL_ORIGINS = True  # Для разработки
+# Для продакшена используйте:
+# CORS_ALLOWED_ORIGINS = ['https://your-frontend.com']
 
-# Для продакшена (раскомментировать при необходимости):
-CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
-
-# Telegram
-TELEGRAM_BOT_TOKEN = env.str("TELEGRAM_BOT_TOKEN", default="test_token_for_ci_123456:ABCdefGhiJKLmnoPQR")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
