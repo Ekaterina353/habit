@@ -19,7 +19,8 @@ def send_telegram_reminders():
         if not chat_id:
             continue
 
-        message = f"Напоминание: пора выполнить привычку:\n{habit.action} в {habit.place} в {habit.time.strftime('%H:%M')}"
+        message = (f"Напоминание: пора выполнить привычку:"
+                   f"\n{habit.action} в {habit.place} в {habit.time.strftime('%H:%M')}")
 
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         params = {
