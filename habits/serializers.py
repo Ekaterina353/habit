@@ -4,37 +4,57 @@ from .models import Habit
 
 
 class HabitSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
     class Meta:
         model = Habit
-        fields = "__all__"
-        read_only_fields = ("user",)
+        fields = [
+            "id",
+            "user",
+            "place",
+            "time",
+            "action",
+            "is_pleasant",
+            "related_habit",
+            "periodicity",
+            "reward",
+            "duration_seconds",
+            "is_public",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["created_at", "updated_at"]
 
     def validate(self, data):
-        # related_habit и reward не могут быть заполнены одновременно
-        if data.get("related_habit") and data.get("reward"):
+        reward = data.get("reward")
+        related_habit = data.get("related_habit")
+        is_pleasant = data.get("is_pleasant")
+        duration_seconds = data.get("duration_seconds")
+        periodicity = data.get("periodicity")
+
+        if reward and related_habit:
             raise serializers.ValidationError(
-                "Нельзя одновременно указывать связанную привычку и вознаграждение."
+                "Нельзя одновременно указывать вознаграждение и связанную привычку."
             )
-        # Время выполнения должно быть не больше 120 секунд
-        if data.get("duration", 0) > 120:
-            raise serializers.ValidationError(
-                "Время выполнения не может превышать 120 секунд."
-            )
-        # В связанные привычки могут попадать только привычки с признаком приятной привычки
-        if data.get("related_habit") and not data["related_habit"].is_pleasant:
-            raise serializers.ValidationError(
-                "В связанные привычки могут попадать только приятные привычки."
-            )
-        # У приятной привычки не может быть вознаграждения или связанной привычки
-        if data.get("is_pleasant") and (
-            data.get("reward") or data.get("related_habit")
-        ):
+
+        if is_pleasant and (reward or related_habit):
             raise serializers.ValidationError(
                 "У приятной привычки не может быть вознаграждения или связанной привычки."
             )
-        # Нельзя выполнять привычку реже, чем 1 раз в 7 дней
-        if not (1 <= data.get("period", 1) <= 7):
+
+        if duration_seconds and duration_seconds > 120:
+            raise serializers.ValidationError(
+                "Время выполнения не должно превышать 120 секунд."
+            )
+
+        if related_habit and not related_habit.is_pleasant:
+            raise serializers.ValidationError(
+                "Связанная привычка должна быть приятной."
+            )
+
+        if periodicity and not (1 <= periodicity <= 7):
             raise serializers.ValidationError(
                 "Периодичность должна быть от 1 до 7 дней."
             )
+
         return data
