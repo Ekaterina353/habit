@@ -6,14 +6,12 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
-
 
 # Application definition
 
@@ -62,7 +60,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "dict_project.wsgi.application"
 
-
 DATABASES = {
     "default": {
         "ENGINE": os.getenv("ENGINE"),
@@ -73,7 +70,6 @@ DATABASES = {
         "HOST": os.getenv("DB_HOST", "db"),
     }
 }
-
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -90,7 +86,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "UTC"
@@ -99,12 +94,9 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 STATIC_URL = "static/"
 
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
