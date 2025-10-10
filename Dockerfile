@@ -7,10 +7,6 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt.lists/*
 
-# Переменные окружения
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
 WORKDIR /app
 
 # Обновление pip
@@ -19,18 +15,15 @@ RUN pip install --upgrade pip
 # Build arguments с безопасными значениями по умолчанию (для CI)
 ARG SECRET_KEY=django-insecure-ci-key-change-in-production
 ARG DEBUG=false
-ARG DB_NAME=habitflow_db
+ARG DB_NAME=courses
 ARG DB_USER=postgres
-ARG DB_PASSWORD=postgres
-ARG DB_HOST=db
+ARG DB_PASSWORD=admin123
+ARG DB_HOST=localhost
 ARG DB_PORT=5432
 ARG CELERY_BROKER_URL=redis://redis:6379/0
 ARG CELERY_RESULT_BACKEND=redis://redis:6379/0
 ARG TELEGRAM_BOT_TOKEN=test_token
 
-# Экспортируем в переменные окружения
-ENV DEBUG=$DEBUG
-ENV DB_PORT=$DB_PORT
 
 # Копируем и устанавливаем зависимости
 COPY requirements.txt .
