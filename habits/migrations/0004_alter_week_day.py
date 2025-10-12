@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("habits", "0003_week_habit_end_time_habit_days_of_week"),
     ]

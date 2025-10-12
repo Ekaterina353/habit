@@ -1,6 +1,7 @@
 import random
 from datetime import datetime, timedelta
 
+
 from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand
 from django.utils import timezone

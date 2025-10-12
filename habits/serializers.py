@@ -5,7 +5,6 @@ from habits.validators import HabitValidator
 
 
 class HabitsSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Habits
         fields = "__all__"
@@ -22,7 +21,6 @@ class HabitsSerializer(serializers.ModelSerializer):
 
 
 class PublicHabitsSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Habits
         fields = ("action", "is_pleasant", "max_time_processing")
