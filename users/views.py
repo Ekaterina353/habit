@@ -1,10 +1,16 @@
-from django.contrib.auth.models import User
 from rest_framework import generics
+from rest_framework.permissions import AllowAny
 
-from .serializers import RegisterSerializer
+from users.serializers import UserSerializer
 
 
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = RegisterSerializer
-    permission_classes = []
+class UserCreateAPIView(generics.CreateAPIView):
+    serializer_class = UserSerializer
+    permission_classes = (AllowAny,)
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        password = serializer.validated_data.get("password")
+        user.set_password(password)
+        user.is_active = True
+        user.save()
