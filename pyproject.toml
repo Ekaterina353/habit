@@ -7,6 +7,16 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.13"
+python-dotenv = "^1.1.1"
+django = "^5.2.4"
+djangorestframework = "^3.16.0"
+djangorestframework-simplejwt = "^5.5.0"
+celery = "^5.5.3"
+redis = "^5.2.1"
+django-cors-headers = "^4.7.0"
+drf-yasg = "^1.21.10"
+requests = "^2.32.4"
+psycopg2 = "^2.9.10"
 dependencies = [
     "signals (>=0.0.2,<0.0.3)",
     "djangorestframework (>=3.16.1,<4.0.0)",
@@ -25,16 +35,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
-python-dotenv = "^1.1.1"
-django = "^5.2.4"
-djangorestframework = "^3.16.0"
-djangorestframework-simplejwt = "^5.5.0"
-celery = "^5.5.3"
-redis = "^5.2.1"
-django-cors-headers = "^4.7.0"
-drf-yasg = "^1.21.10"
-requests = "^2.32.4"
-psycopg2 = "^2.9.10"
+
 pytest-html = "^4.1.1"
 pytest-django = "^4.11.1"
 pytest = "^8.4.1"
