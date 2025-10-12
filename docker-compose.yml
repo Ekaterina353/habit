@@ -1,85 +1,80 @@
 version: '3.8'
 
 services:
-  # База данных
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-
-  # Redis
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    restart: unless-stopped
-
-  # Django + Gunicorn + миграции + статика
-  backend:
+  web:
     build:
       context: .
-      args:
-        SECRET_KEY: ${SECRET_KEY}
-        DEBUG: ${DEBUG}
-        DB_NAME: ${DB_NAME}
-        DB_USER: ${DB_USER}
-        DB_PASSWORD: ${DB_PASSWORD}
-        DB_HOST: ${DB_HOST}
-        DB_PORT: ${DB_PORT}
-        CELERY_BROKER_URL: ${CELERY_BROKER_URL}
-        CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
-        TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-        env_file: .env
+      dockerfile: Dockerfile
+    container_name: django_app
     command: >
-      sh -c "
-      python manage.py migrate --noinput &&
-      gunicorn config.wsgi:application --bind ${DJANGO_HOST}:${DJANGO_PORT}
-      "
-    env_file: .env
-    volumes:
-      - static_volume:/app/static
-      - media_volume:/app/media
-    expose:
-      - "${DJANGO_PORT}"
-    depends_on:
-      - db
-      - redis
-    restart: unless-stopped
-
-  # Celery Worker
-  celery:
-    build: .
-    command: celery -A config worker -l info
-    env_file: .env
-    volumes:
-      - media_volume:/app/media
-    depends_on:
-      - db
-      - redis
-    restart: unless-stopped
-
-  # Nginx как reverse-proxy
-  nginx:
-    image: nginx:alpine
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
     ports:
-      - "${NGINX_PORT}:80"
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_HOST: db
+      REDIS_HOST: redis
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - static_volume:/app/static
-      - media_volume:/app/media
+      - .:/app
     depends_on:
-      - backend
-    restart: unless-stopped
+      - db
+      - redis
 
-# Тома
+  db:
+    image: postgres:16.3
+    container_name: postgres_db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery_worker
+    command: >
+      sh -c "celery -A config worker --loglevel=info"
+    env_file:
+      - .env
+    environment:
+      DATABASE_HOST: db
+      REDIS_HOST: redis
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+      - web
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery_beat
+    command: >
+      sh -c "celery -A config beat --loglevel=info"
+    env_file:
+      - .env
+    environment:
+      DATABASE_HOST: db
+      REDIS_HOST: redis
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+      - web
+
 volumes:
   postgres_data:
-  static_volume:
-  media_volume:

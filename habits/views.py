@@ -1,44 +1,72 @@
-from requests import Response
-from rest_framework import filters, viewsets
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.shortcuts import get_object_or_404, render
+from django_celery_beat.models import PeriodicTask
+from rest_framework import generics
 
-from .models import Habit
-from .permissions import IsOwnerOrReadOnly
-from .serializers import HabitSerializer
-
-
-class HabitPagination(PageNumberPagination):
-    page_size = 5
-    page_size_query_param = "page_size"
-    max_page_size = 20
+from habits.models import Habits
+from habits.paginators import HabitsPagination
+from habits.serializers import HabitsSerializer, PublicHabitsSerializer
+from habits.services import create_replacements, create_schedule, create_task, make_replacements
+from users.permissions import IsUser
 
 
-class HabitViewSet(viewsets.ModelViewSet):
-    serializer_class = HabitSerializer
-    pagination_class = HabitPagination
-
-    def get_permissions(self):
-        if self.action == "list_public":
-            return [AllowAny()]
-        return [IsAuthenticated(), IsOwnerOrReadOnly()]
-
-    def get_queryset(self):
-        if self.action == "list_public":
-            return Habit.objects.filter(is_public=True)
-        return Habit.objects.filter(user=self.request.user)
+class HabitCreateAPIView(generics.CreateAPIView):
+    serializer_class = HabitsSerializer
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        habit = serializer.save(user=self.request.user)
+        if not habit.is_pleasant:
+            replacements = create_replacements(habit)
+            habit.frequency = make_replacements(habit.frequency, replacements)
+            habit.save()
 
-    from rest_framework.decorators import action
+            if habit.user.tg_chat_id:
+                schedule = create_schedule(habit.frequency)
+                create_task(schedule, habit)
 
-    @action(detail=False, methods=["get"], url_path="public", url_name="public")
-    def list_public(self, request):
-        queryset = Habit.objects.filter(is_public=True)
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+
+class PublicHabitListAPIView(generics.ListAPIView):
+    serializer_class = PublicHabitsSerializer
+
+    def get_queryset(self):
+        return Habits.objects.filter(is_public=True)
+
+
+class HabitListAPIView(generics.ListAPIView):
+    serializer_class = HabitsSerializer
+    pagination_class = HabitsPagination
+
+    def get_queryset(self):
+        return Habits.objects.filter(user=self.request.user)
+
+
+class HabitRetrieveAPIView(generics.RetrieveAPIView):
+    queryset = Habits.objects.all()
+    serializer_class = HabitsSerializer
+    permission_classes = (IsUser,)
+
+
+class HabitUpdateAPIView(generics.UpdateAPIView):
+    queryset = Habits.objects.all()
+    serializer_class = HabitsSerializer
+    permission_classes = (IsUser,)
+
+    def perform_update(self, serializer):
+        habit = serializer.save(user=self.request.user)
+        if not habit.is_pleasant:
+            replacements = create_replacements(habit)
+            habit.frequency = make_replacements(habit.frequency, replacements)
+            habit.save()
+
+            if habit.user.tg_chat_id:
+                task = get_object_or_404(PeriodicTask, name=f"Sending reminder {habit.pk}")
+                schedule = create_schedule(habit.frequency)
+                if task:
+                    task.enabled = False
+                    task.delete()
+                create_task(schedule, habit)
+
+
+class HabitDestroyAPIView(generics.DestroyAPIView):
+    queryset = Habits.objects.all()
+    permission_classes = (IsUser,)
+    serializer_class = HabitsSerializer

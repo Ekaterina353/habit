@@ -1,33 +1,20 @@
 import requests
 from celery import shared_task
-from django.conf import settings
-from django.utils.timezone import now
 
-from .models import Habit
+from config.settings import TELEGRAM_BOT_TOKEN
+from habits.models import Habits
 
 
 @shared_task
-def send_telegram_reminders():
-    current_time = now().time().replace(second=0, microsecond=0)
-
-    habits = Habit.objects.filter(time=current_time)
-    bot_token = settings.TELEGRAM_BOT_TOKEN
-
-    for habit in habits:
-        user = habit.user
-        chat_id = getattr(user, "telegram_chat_id", None)
-        if not chat_id:
-            continue
-
-        message = f"Напоминание: пора выполнить привычку:\n{habit.action} в {habit.place} в {habit.time.strftime('%H:%M')}"
-
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        params = {
-            "chat_id": chat_id,
-            "text": message,
-        }
-        try:
-            requests.get(url, params=params)
-        except Exception as e:
-
-            print(f"Ошибка отправки Telegram уведомления: {e}")
+def send_message(pk) -> None:
+    """Отправка напоминания пользователю."""
+    habit = Habits.objects.get(pk=pk)
+    text = (
+        f"Время для {habit.action} в {habit.place}! "
+        f"Не забудьте {habit.reward if habit.reward else habit.related_habit}."
+    )
+    params = {
+        "text": text,
+        "chat_id": habit.user.tg_chat_id,
+    }
+    requests.get(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", params=params)
