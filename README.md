@@ -108,9 +108,45 @@
     ```
     *(Или более специфично, например: `poetry run pytest` если используется pytest)*
 
+# Django
+SECRET_KEY=your_secure_secret_key_here
+DEBUG=True
+ALLOWED_HOSTS=127.0.0.1,localhost,nginx
+
+# База данных
+DB_NAME=habitflow_db
+DB_USER=postgres
+DB_PASSWORD=your_strong_password
+DB_HOST=db
+DB_PORT=5432
+
+# Redis & Celery
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+# Telegram
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+
+# Порты
+DJANGO_PORT=8000
+DJANGO_HOST=0.0.0.0
+NGINX_PORT=80
+NGINX_HOST=0.0.0.0
+
 # Запуск проекта с использованием Docker Compose
 
 Этот файл `docker-compose.yml` определяет конфигурацию для запуска всех необходимых сервисов вашего проекта: веб-приложения Django, базы данных PostgreSQL, Redis и Celery (worker и beat).
+
+Докер
+docker-compose
+
+4. Запустите проект одной команды.
+docker-compose up -d --build
+
+5. Примените изменения и создайте суперпользователя.
+
+docker-compose run backend python manage.py migrate --noinput
+docker-compose run backend python manage.py createsuperuser
 
 ## Предварительные требования
 
@@ -118,21 +154,84 @@
 *   [Docker Compose](https://docs.docker.com/compose/install/) установлен (обычно входит в состав Docker Desktop).
 *   Файл `.env` с необходимыми переменными окружения (например, `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD`).
 
-## Процесс запуска
+6. Открыть приложение
+API: http://localhost
+Админка: http://localhost/admin
+Swagger: http://localhost/swagger
+Redoc: http://localhost/redoc
+🛠️ CI/CD: Действия GitHub
+Проект настроен на автоматический CI/CD через GitHub Actions.
 
-### 1. Сборка и запуск всех сервисов
+Что делает пайплайн:
+✅ Проверяет код черезflake8
+✅ Запускает тесты с PostgreSQL и Redis
+✅ Собирает Docker-образы ( , )backendcelery
+✅ успех Прие — деплоит на удаленный сервер через SSH
+Настройка Действия GitHub
+Перейдите вSettings → Secrets and variables → Actions
+добавьте следующие секреты:
+SSH_PRIVATE_KEY
+Приватный ключ для доступа к серверу
+SERVER_IP
+IP-адрес сервера
+SSH_USERNAME
+Имя пользователя на расстоянии (например, )
+ubuntu
+SSH_PORT
+Порт SSH (обычно )
+22
+SECRET_KEY
+Секретный ключ Джанго
+DB_PASSWORD
+Пароль от PostgreSQL
+TELEGRAM_BOT_TOKEN
+Токен Telegram-бота
+DEBUG
+false
+(для продакшена)
 
-Перейдите в корневую директорию вашего проекта (где находится файл `docker-compose.yml` и `Dockerfile`). Затем выполните следующую команду:
+Файл пайплайна:.github/result/deploy.yml
 
-```bash
-docker-compose up --build
-```
+🖥️ Настройка удаленного сервера
+1. Установите Docker и Docker Compose.
 
-или 
+sudo apt update && sudo apt upgrade -y
+sudo apt install docker.io docker-compose -y
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo usermod -aG docker $USER
+Перейдите по SSH. 
 
-```bash
-docker-compose -f docker-compose.yml up
-```
+2. Настройте SSH-доступ для GitHub Actions.
+Создадим SSH-ключ на локальной машине:
+ssh-keygen -t ed25519 -C "github-actions@deploy" -f ./deploy_key
+Содержимое ключей в телефоне.deploy_key.pub~/.ssh/authorized_keys
+Приватный ключевой раздел в GitHub Secrets как .deploy_keySSH_PRIVATE_KEY
+3. Убедитесь, что порты открыты.
+22— SSH
+80— HTTP (Nginx)
+5432— PostgreSQL (опционально, если нужен доступ)
+6379— Redis (опционально)
+🚀 Автоматический деплой
+При каждом коммите на ветку :work/final-work_9
+
+Действия GitHub:
+Проверяет код
+Собирает образы
+Развернуть на сервере
+На сервере:
+Клонируется репозиторий (если нужно)
+Обновляется.env
+Перезадача контейнеров
+При смене прибытия
+Собирается статика
+🧪 Тесты
+Запустите локальные тесты:
+
+docker-compose run backend python manage.py test
+Или через Docker:
+
+python manage.py test --settings=config.settings.test
 
 ## Разработчик:
 
